@@ -141,9 +141,6 @@ def main() -> None:
     with tab_inputs:
         progress_container = st.container()
 
-        if st.button("Add", type="primary"):
-            _add_row()
-
         slider_count = len(st.session_state.row_ids)
         target_total = slider_count * 100 if slider_count else 0
         total_slider = sum(
@@ -198,13 +195,8 @@ def main() -> None:
                     st.session_state.pop(f"slider_{row_id}", None)
             if not st.session_state.row_ids:
                 _add_row()
-
-        st.divider()
-        st.write(f"選択した日付: {selected_date.isoformat()}")
-
-        entries = _current_entries()
-        st.write("現在の入力:")
-        st.json(entries)
+        if st.button("Add", type="primary"):
+            _add_row()
 
     _save_entries_for_date(selected_date, entries)
 
