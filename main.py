@@ -210,34 +210,38 @@ def main() -> None:
 
     with tab_chart:
         st.subheader("1週間のスライダー推移")
-
-        if not st.session_state.history:
-            st.info("表示できるデータがありません。")
-            return
-
         start_day = selected_date - timedelta(days=6)
         week_days = [start_day + timedelta(days=offset) for offset in range(7)]
         week_labels = [day.isoformat() for day in week_days]
 
+        daily_entries = {
+            label: _read_entries_from_disk(day)
+            for day, label in zip(week_days, week_labels)
+        }
+
         max_length = 0
         label_cache: dict[int, str] = {}
-        for label in week_labels:
-            day_entries = st.session_state.history.get(label, [])
+        for label, day_entries in daily_entries.items():
             max_length = max(max_length, len(day_entries))
             for index, item in enumerate(day_entries):
-                if item.get("label") and index not in label_cache:
-                    label_cache[index] = item["label"]
+                text_label = str(item.get("text", "")).strip()
+                if text_label and index not in label_cache:
+                    label_cache[index] = text_label
 
         if max_length == 0:
-            st.info("まだスライダーの値が保存されていません。")
+            st.info("表示できるデータがありません。")
             return
 
         records = []
         for index in range(max_length):
             slider_label = label_cache.get(index, f"スライダー{index + 1}")
             for day, label in zip(week_days, week_labels):
-                day_entries = st.session_state.history.get(label, [])
-                value = day_entries[index]["value"] if index < len(day_entries) else 0
+                day_entries = daily_entries.get(label, [])
+                value = (
+                    _as_int(day_entries[index].get("slider", 0))
+                    if index < len(day_entries)
+                    else 0
+                )
                 records.append(
                     {
                         "日付": label,
@@ -247,10 +251,6 @@ def main() -> None:
                 )
 
         df = pd.DataFrame(records)
-        if df.empty:
-            st.info("表示できるデータがありません。")
-            return
-
         chart = (
             alt.Chart(df)
             .mark_bar()
